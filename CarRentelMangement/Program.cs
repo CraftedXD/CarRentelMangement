@@ -1,11 +1,15 @@
-﻿using CarRentelMangement.Components;
+﻿
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
+using CarRentalManagement.Data;
+using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Identity;
+using CarRentelMangement.Components.Account;
 using CarRentelMangement.Data;
+using CarRentelMangement.Components;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddDbContextFactory<CarRentelMangementContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("CarRentelMangementContext") ?? throw new InvalidOperationException("Connection string 'CarRentelMangementContext' not found.")));
+builder.Services.AddDbContextFactory<CarRentalManagementContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("CarRentalManagementContext") ?? throw new InvalidOperationException("Connection string 'CarRentalManagementContext' not found.")));
 
 builder.Services.AddQuickGridEntityFrameworkAdapter();
 
@@ -14,6 +18,28 @@ builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+builder.Services.AddCascadingAuthenticationState();
+
+builder.Services.AddScoped<IdentityUserAccessor>();
+
+builder.Services.AddScoped<IdentityRedirectManager>();
+
+builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultScheme = IdentityConstants.ApplicationScheme;
+    options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
+})
+    .AddIdentityCookies();
+
+builder.Services.AddIdentityCore<CarRentelMangementUser>(options => options.SignIn.RequireConfirmedAccount = true)
+    .AddEntityFrameworkStores<CarRentalManagementContext>()
+    .AddSignInManager()
+    .AddDefaultTokenProviders();
+
+builder.Services.AddSingleton<IEmailSender<CarRentelMangementUser>, IdentityNoOpEmailSender>();
 
 var app = builder.Build();
 
@@ -33,5 +59,7 @@ app.UseAntiforgery();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+app.MapAdditionalIdentityEndpoints(); ;
 
 app.Run();
